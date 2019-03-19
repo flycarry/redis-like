@@ -4,13 +4,9 @@ type str struct {
 	data string
 }
 
-
-func NewStr(s string)*str{
+func NewStr(s string) *str {
 	return &str{s}
 }
-func (s *str)Value()string{
+func (s *str) Value() string {
 	return s.data
-}
-func (s *str)gettype()int{
-	return isstr
 }

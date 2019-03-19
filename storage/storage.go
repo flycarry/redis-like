@@ -1,90 +1,87 @@
 package storage
 
-
-type Data struct {
-	hashmap map[string]value
-}
-type value interface {
-	gettype()int
-}
-const (
-	isstr =iota
-	islist
-	ismap
-	isset
+import (
+	"errors"
+	"sync"
 )
 
-const (
-	sucess =iota
-	notExist
-	typyError
-)
-
-func isRegex(key,p string)bool{
-	return true
+type dict struct {
+	storage map[string]value
 }
-func  isExist(v value) bool{
-	return v!=nil
+type value struct {
+	mutex sync.RWMutex
+	val   data
 }
-func NewData()*Data{
-	return &Data{make(map[string]value)}
+type data interface {
+	getType() int
 }
-func (d *Data) SetString(key string,value string)int{
-	d.hashmap[key]=NewStr(value)
-	return sucess
+type funcStruct struct {
+	checkKey bool
+	params   int
+	function func(...string) func(...string) string
 }
 
-func (d *Data) GetString(key string) (result string,err int){
-	value:=d.hashmap[key]
-	if isExist(value){
-		if v,ok:=value.(*str);ok{
-			return v.Value(),sucess
-		}else {
-			return "",typyError
-		}
-	}else {
-		return "", notExist
+var mapFunc map[string]funcStruct
+
+var db dict
+
+func init() {
+	db = dict{make(map[string]value)}
+	mapFunc = make(map[string]funcStruct, 10)
+	mapFunc["isexsit"] = funcStruct{true, 1, isExist}
+}
+
+func (d *dict) exist(key string) bool {
+
+	d.storage[key].mutex.RLock()
+	defer d.storage[key].mutex.RUnlock()
+	_, ok := d.storage[key]
+	if ok {
+		return true
+	} else {
+		return false
+	}
+}
+func isExist(_ ...string) func(...string) string {
+	return func(_ ...string) string {
+		return "exist"
 	}
 }
 
-func (d *Data) RPush(key string,value string)(err int){
-	v:=d.hashmap[key]
-	if isExist(v){
-		if v,ok:=v.(*strList);ok{
-			v.rpush(value)
-			return sucess
-		}else {
-			return typyError
+func (mapfunc *funcStruct) checkFunc(subparams ...string) error {
+	if mapfunc.params > 0 {
+		if mapfunc.params != len(subparams) {
+			return errors.New("params number not right")
 		}
-	}else {
-		list:=NewStrList()
-		list.rpush(value)
-		d.hashmap[key]=list
-		return sucess
+	}
+	if mapfunc.checkKey {
+		if !db.exist(subparams[0]) {
+			return errors.New("key not exist")
+		}
+	}
+	return nil
+}
+func GetResult(params ...string) (result string, err error) {
+	if len(params) < 2 {
+	}
+}
+func GetFunc(params ...string) func(...string) string {
+	if len(params) < 2 {
+		return errResponse(errors.New("params too short"))
+	}
+	mapstruct, ok := mapFunc[params[0]]
+	if ok {
+		if err := mapstruct.checkFunc(params[1:]...); err != nil {
+			return errResponse(err)
+		}
+		return mapstruct.function(params[1:]...)
+	} else {
+		return func(_ ...string) string { return "no such function" }
 	}
 }
 
-func (d *Data) RPop(key string) (string,int){
-	value:=d.hashmap[key]
-	if isExist(value){
-		if v,ok:=value.(*strList);ok{
-			return v.rpop(),sucess
-		}else {
-			return "",typyError
-		}
-	}else {
-		return "",notExist
+func errResponse(err error) func(...string) string {
+	return func(_ ...string) string {
+		return err.Error()
 	}
 }
-
-func (d *Data)Keys(pattern string)[]string{
-	keys:=make([]string,0,16)
-	for key,_ :=range d.hashmap{
-		if isRegex(key,pattern){
-			keys=append(keys, key)
-		}
-	}
-	return keys
-}
-
-
