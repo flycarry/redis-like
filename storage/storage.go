@@ -1,90 +1,67 @@
 package storage
 
-
-type Data struct {
-	hashmap map[string]value
-}
-type value interface {
-	gettype()int
-}
-const (
-	isstr =iota
-	islist
-	ismap
-	isset
+import (
+	"errors"
+	"regexp"
+	"strings"
+	"sync"
 )
 
-const (
-	sucess =iota
-	notExist
-	typyError
-)
-
-func isRegex(key,p string)bool{
-	return true
-}
-func  isExist(v value) bool{
-	return v!=nil
-}
-func NewData()*Data{
-	return &Data{make(map[string]value)}
-}
-func (d *Data) SetString(key string,value string)int{
-	d.hashmap[key]=NewStr(value)
-	return sucess
+// Value represent that value in BigData
+type Value struct {
+	Princess interface{}
+	Lock     sync.RWMutex
 }
 
-func (d *Data) GetString(key string) (result string,err int){
-	value:=d.hashmap[key]
-	if isExist(value){
-		if v,ok:=value.(*str);ok{
-			return v.Value(),sucess
-		}else {
-			return "",typyError
-		}
-	}else {
-		return "", notExist
+// Method represent the method that underlying data structure regsiter
+type Method func([]string) (string, error)
+
+// ErrMethodNotSupport means that method not support
+var ErrMethodNotSupport = errors.New("method not support")
+
+// ErrInvalidNumPara means that invalid number of parameters
+var ErrInvalidNumPara = errors.New("invalid number of parameters")
+
+// ErrKeyNotExist means that the key don't exist
+var ErrKeyNotExist = errors.New("key do not exist")
+
+// BigData represent a table in redis-like
+var BigData map[string]*Value
+
+// MethodMap is a set that include all supported method
+var MethodMap map[string]Method
+
+// DataLock is a lock which protect the BigData's keys
+var DataLock sync.RWMutex
+
+func init() {
+	BigData = make(map[string]*Value)
+	MethodMap = make(map[string]Method)
+}
+
+// RegisterMethod can let underlying data structure register their method support
+func RegisterMethod(methodName string, method Method) (err error) {
+	if _, ok := MethodMap[methodName]; ok {
+		err = errors.New("method already exist")
+		return
 	}
+	MethodMap[methodName] = method
+	return nil
 }
 
-func (d *Data) RPush(key string,value string)(err int){
-	v:=d.hashmap[key]
-	if isExist(v){
-		if v,ok:=v.(*strList);ok{
-			v.rpush(value)
-			return sucess
-		}else {
-			return typyError
-		}
-	}else {
-		list:=NewStrList()
-		list.rpush(value)
-		d.hashmap[key]=list
-		return sucess
+// Process accept all commond string, parse it and distribute to the corresponding method
+func Process(command string) (result string) {
+	temp := regexp.MustCompile(`\s+`).Split(strings.TrimSpace(command), -1)
+	if len(temp) < 2 {
+		return "-error: invalid number of parameters\r\n"
 	}
-}
-
-func (d *Data) RPop(key string) (string,int){
-	value:=d.hashmap[key]
-	if isExist(value){
-		if v,ok:=value.(*strList);ok{
-			return v.rpop(),sucess
-		}else {
-			return "",typyError
-		}
-	}else {
-		return "",notExist
+	method, ok := MethodMap[strings.ToUpper(temp[0])]
+	if !ok {
+		return "-error: method not support"
 	}
-}
-
-func (d *Data)Keys(pattern string)[]string{
-	keys:=make([]string,0,16)
-	for key,_ :=range d.hashmap{
-		if isRegex(key,pattern){
-			keys=append(keys, key)
-		}
+	result, err := method(temp[1:])
+	if err != nil {
+		return "-error: " + err.Error()
 	}
-	return keys
+	return
 }
-
-
