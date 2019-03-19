@@ -16,30 +16,33 @@ type data interface {
 	getType() int
 }
 type funcStruct struct {
-	checkKey bool
 	params   int
 	function func(...string) (string,error)
 }
-
 var mapFunc map[string]funcStruct
-
 var db dict
-var mu sync.Mutex
+var mu sync.RWMutex
+
+//init db and function map
 func init() {
 	db = dict{make(map[string]*value)}
 	mapFunc = make(map[string]funcStruct, 10)
-	mapFunc["isexsit"] = funcStruct{true, 1, isExist}
+	mapFunc["exist"] = funcStruct{ 1, isExist}
+	mapFunc["del"]=funcStruct{1,delKey}
+	mapFunc["set"]=funcStruct{2,setStr}
+	mapFunc["get"]=funcStruct{1,getStr}
 }
 
 func (d *dict) exist(key string) bool {
-	return d.storage[key]!=nil
-}
-func isExist(params ...string)  (string,error){
-	if db.exist(params[0]){
-		return "yes",nil
+	err:=getLock(key)
+	if err != nil {
+		return false
 	}
-	return "no",nil
+	defer getUnLock(key)
+	return d.storage[key]==nil
 }
+
+
 
 func GetResult(params ...string) (result string, err error) {
 	if len(params) < 2 {
@@ -61,31 +64,58 @@ func GetResult(params ...string) (result string, err error) {
 }
 
 func getLock(key string)error{
-	defer func() {
-		mu.Lock()
-		return func() {mu.Unlock()}
-}
-	if db.exist(key){
+	mu.RLock()
+	if db.storage[key]!=nil{
 		db.storage[key].mutex.RLock()
+		mu.RUnlock()
 		return nil
 	}else{
+		mu.RUnlock()
 		return  errors.New("not exist")
 	}
 }
-func getUnLock(key string)error{
+func getUnLock(key string){
 	db.storage[key].mutex.RUnlock()
-	return nil
 }
 
 func setLock(key string)error{
-	if db.exist(key){
+	mu.Lock()
+	if db.storage[key]!=nil{
 		db.storage[key].mutex.Lock()
+		mu.Unlock()
 		return nil
 	}else{
+		db.storage[key]=&value{sync.RWMutex{},nil}
+		db.storage[key].mutex.Lock()
+		mu.Unlock()
 		return  errors.New("not exist")
 	}
 }
-func setUnLock(key string)error{
-	db.storage[key].mutex.Unlock()
-	return nil
+func setUnLock(key string){
+	v:=db.storage[key]
+	if v.val==nil{
+		db.storage[key]=nil
+		v.mutex.Unlock()
+	}else {
+		v.mutex.Unlock()
+	}
+}
+func isExist(params ...string)  (string,error){
+	if db.exist(params[0]){
+		return "yes",nil
+	}
+	return "no",nil
+}
+
+func delKey(params ...string)(string,error){
+	key:=params[0]
+	err:=setLock(key)
+	if err != nil {
+		setUnLock(key)
+		return "",err
+	}else {
+		db.storage[key].val=nil
+		setUnLock(key)
+		return "delete success",nil
+	}
 }
