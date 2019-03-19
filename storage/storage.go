@@ -6,7 +6,7 @@ import (
 )
 
 type dict struct {
-	storage map[string]value
+	storage map[string]*value
 }
 type value struct {
 	mutex sync.RWMutex
@@ -18,70 +18,74 @@ type data interface {
 type funcStruct struct {
 	checkKey bool
 	params   int
-	function func(...string) func(...string) string
+	function func(...string) (string,error)
 }
 
 var mapFunc map[string]funcStruct
 
 var db dict
-
+var mu sync.Mutex
 func init() {
-	db = dict{make(map[string]value)}
+	db = dict{make(map[string]*value)}
 	mapFunc = make(map[string]funcStruct, 10)
 	mapFunc["isexsit"] = funcStruct{true, 1, isExist}
 }
 
 func (d *dict) exist(key string) bool {
-
-	d.storage[key].mutex.RLock()
-	defer d.storage[key].mutex.RUnlock()
-	_, ok := d.storage[key]
-	if ok {
-		return true
-	} else {
-		return false
-	}
+	return d.storage[key]!=nil
 }
-func isExist(_ ...string) func(...string) string {
-	return func(_ ...string) string {
-		return "exist"
+func isExist(params ...string)  (string,error){
+	if db.exist(params[0]){
+		return "yes",nil
 	}
+	return "no",nil
 }
 
-func (mapfunc *funcStruct) checkFunc(subparams ...string) error {
-	if mapfunc.params > 0 {
-		if mapfunc.params != len(subparams) {
-			return errors.New("params number not right")
-		}
-	}
-	if mapfunc.checkKey {
-		if !db.exist(subparams[0]) {
-			return errors.New("key not exist")
-		}
-	}
-	return nil
-}
 func GetResult(params ...string) (result string, err error) {
 	if len(params) < 2 {
+		return "",errors.New("params too short")
 	}
-}
-func GetFunc(params ...string) func(...string) string {
-	if len(params) < 2 {
-		return errResponse(errors.New("params too short"))
-	}
-	mapstruct, ok := mapFunc[params[0]]
+	mapfunc, ok := mapFunc[params[0]]
+
 	if ok {
-		if err := mapstruct.checkFunc(params[1:]...); err != nil {
-			return errResponse(err)
+		if mapfunc.params > 0 {
+			if mapfunc.params != len(params)-1 {
+				return "",errors.New("params number not right")
+			}
 		}
-		return mapstruct.function(params[1:]...)
+		return mapfunc.function(params[1:]...)
 	} else {
-		return func(_ ...string) string { return "no such function" }
+		return "", errors.New("no such function")
 	}
+
 }
 
-func errResponse(err error) func(...string) string {
-	return func(_ ...string) string {
-		return err.Error()
+func getLock(key string)error{
+	defer func() {
+		mu.Lock()
+		return func() {mu.Unlock()}
+}
+	if db.exist(key){
+		db.storage[key].mutex.RLock()
+		return nil
+	}else{
+		return  errors.New("not exist")
 	}
+}
+func getUnLock(key string)error{
+	db.storage[key].mutex.RUnlock()
+	return nil
+}
+
+func setLock(key string)error{
+	if db.exist(key){
+		db.storage[key].mutex.Lock()
+		return nil
+	}else{
+		return  errors.New("not exist")
+	}
+}
+func setUnLock(key string)error{
+	db.storage[key].mutex.Unlock()
+	return nil
 }
