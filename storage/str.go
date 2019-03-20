@@ -1,9 +1,9 @@
 package storage
 
 func init() {
-	RegisterMethod("SET", Set)
-	RegisterMethod("GET", Get)
-	RegisterMethod("DEL", Del)
+	RegisterMethod("set", Set)
+	RegisterMethod("get", Get)
+	RegisterMethod("del", Del)
 }
 
 // Set update the str

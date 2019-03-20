@@ -25,19 +25,17 @@ var ErrInvalidNumPara = errors.New("invalid number of parameters")
 // ErrKeyNotExist means that the key don't exist
 var ErrKeyNotExist = errors.New("key do not exist")
 
+// ErrInvalidPara means that the parameters is invalidPara
+var ErrInvalidPara = errors.New("invalid parameters")
+
 // BigData represent a table in redis-like
-var BigData map[string]*Value
+var BigData = make(map[string]*Value)
 
 // MethodMap is a set that include all supported method
-var MethodMap map[string]Method
+var MethodMap = make(map[string]Method)
 
 // DataLock is a lock which protect the BigData's keys
 var DataLock sync.RWMutex
-
-func init() {
-	BigData = make(map[string]*Value)
-	MethodMap = make(map[string]Method)
-}
 
 // RegisterMethod can let underlying data structure register their method support
 func RegisterMethod(methodName string, method Method) (err error) {
@@ -55,7 +53,7 @@ func Process(command string) (result string) {
 	if len(temp) < 2 {
 		return "-error: invalid number of parameters"
 	}
-	method, ok := MethodMap[strings.ToUpper(temp[0])]
+	method, ok := MethodMap[strings.ToLower(temp[0])]
 	if !ok {
 		return "-error: method not support"
 	}
