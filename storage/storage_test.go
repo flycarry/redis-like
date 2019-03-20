@@ -22,8 +22,19 @@ func TestProcess(t *testing.T) {
 		{"lget hello", "-error: method not support"},
 	}
 
-	for _, everyTest := range testTable {
-		result := Process(everyTest.command)
-		assert.Equal(t, everyTest.result, result, "failed")
+	testFun := func() {
+		for _, everyTest := range testTable {
+			result := Process(everyTest.command)
+			assert.Equal(t, everyTest.result, result, "failed")
+		}
+	}
+	testFun()
+}
+
+func BenchmarkProcess(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		Process("set hello world")
+		Process("get hello")
+		Process("del hello")
 	}
 }
