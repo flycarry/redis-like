@@ -31,14 +31,22 @@ func Socket_server(port string){
 }
 
 func resolve_conn(c net.Conn){
-	buf:=make([]byte,512)
-	l,err:=c.Read(buf)
-	if err != nil {
-		log.Println(err)
+	for {
+		buf := make([]byte, 512)
+		l, err := c.Read(buf)
+		if err != nil {
+			log.Println(err)
+			if err==io.EOF{
+				return
+			}
+		}
+		log.Println(string(buf[:l]))
+		_,err=io.WriteString(c, route.DoReply(string(buf[:l]))+"\n")
+		if err != nil {
+			panic("socket error")
+		}
+		defer c.Close()
 	}
-	log.Println(string(buf[:l]))
-	io.WriteString(c,route.DoReply(string(buf[:l])))
-	defer c.Close()
 }
 
 func parsePars(msg []byte)[]string{
