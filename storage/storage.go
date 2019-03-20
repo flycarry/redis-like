@@ -53,7 +53,7 @@ func RegisterMethod(methodName string, method Method) (err error) {
 func Process(command string) (result string) {
 	temp := regexp.MustCompile(`\s+`).Split(strings.TrimSpace(command), -1)
 	if len(temp) < 2 {
-		return "-error: invalid number of parameters\r\n"
+		return "-error: invalid number of parameters"
 	}
 	method, ok := MethodMap[strings.ToUpper(temp[0])]
 	if !ok {
@@ -63,5 +63,6 @@ func Process(command string) (result string) {
 	if err != nil {
 		return "-error: " + err.Error()
 	}
+	result = result
 	return
 }

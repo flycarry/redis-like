@@ -1,70 +1,57 @@
 package net
 
 import (
-	"github.com/flycarry/redis-like/storage"
-	"io/ioutil"
+	"bufio"
+	"bytes"
+	"fmt"
+	"io"
 	"log"
 	"net"
-	"strconv"
-	"strings"
+
+	"github.com/flycarry/redis-like/storage"
 )
-var data *storage.Data
-func init() {
-	data=storage.NewData()
-}
-const(
-	setString = iota
-	getString
-	rPush
-	rPop
-)
-func Socket_server(port string){
-	l,err:=net.Listen("tcp",port)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	defer l.Close()
+
+var messageSeparator = []byte{'\r', '\n'}
+
+// SocketServer listen to the local port
+func SocketServer(addr string) {
+	tcpAddr, err := net.ResolveTCPAddr("tcp4", addr)
+	checkError(err)
+	listener, err := net.ListenTCP("tcp", tcpAddr)
+	checkError(err)
+
 	for {
-		conn,err:=l.Accept()
+		conn, err := listener.Accept()
 		if err != nil {
-			log.Println(err)
+			continue
 		}
-		log.Printf("get request from %s",conn.RemoteAddr())
-		go resolve_conn(conn)
+		go resolveConn(conn)
 	}
 }
 
-func resolve_conn(c net.Conn){
-	msg,err:=ioutil.ReadAll(c)
+func resolveConn(conn net.Conn) {
+	split := func(data []byte, atEOF bool) (int, []byte, error) {
+		index := bytes.Index(data, messageSeparator)
+		if index != -1 {
+			return index + 2, data[:index], nil
+		}
+		if atEOF {
+			return 0, nil, io.EOF
+		}
+		return 0, nil, nil
+	}
+	scanner := bufio.NewScanner(conn)
+	scanner.Split(split)
+	for scanner.Scan() {
+		result := storage.Process(scanner.Text())
+		io.WriteString(conn, result+string(messageSeparator))
+	}
+	fmt.Println("connection over")
+	return
+}
+
+func checkError(err error) {
 	if err != nil {
-		c.Close()
-		return
+		log.Fatal(err)
 	}
-	if len(msg)>1{
-		pars:=parsePars(msg)
-		methon,err:=strconv.Atoi(pars[0])
-		if err != nil {
-			c.Close()
-			return
-		}
-		switch methon {
-		case setString:
-			result:=data.SetString(pars[1],pars[2])
-			c.Write([]byte(strconv.Itoa(result)))
-		case getString:
-			resultStr,err:=data.GetString(pars[1])
-			if err != -1 {
-				c.Write([]byte(strconv.Itoa(err)))
-				return
-			}
-			c.Write([]byte(resultStr))
-		}
-	}
-	c.Close()
-}
-
-func parsePars(msg []byte)[]string{
-	msgStr:=string(msg)
-	return strings.Split(msgStr," ")
-
 }
