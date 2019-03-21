@@ -2,6 +2,7 @@ package storage
 
 import (
 	"strconv"
+	"strings"
 )
 
 type strlist struct {
@@ -62,6 +63,36 @@ func (list *strlist) popFront() (string) {
 		list.len--
 		return value
 	}
+}
+func (list *strlist) lgets(start, end int) ([]string) {
+	ss := make([]string, 0, list.len)
+	if end < 0 {
+		end = list.len + end
+	}
+	if start >= end {
+		return ss
+	}
+	for i, node := 0, list.head; i < end; node = node.next {
+		if i >= start {
+			ss = append(ss, node.value)
+		}
+		i++
+	}
+	return ss
+
+}
+func (list *strlist) rgets(start, end int) ([]string) {
+	ss := make([]string, 0, list.len)
+	if end < 0 {
+		end = list.len + end
+	}
+	if start < end {
+		return ss
+	}
+	for i, node := 0, list.tail; i <= end; node = node.pre {
+		ss = append(ss, node.value)
+	}
+	return ss
 }
 func lpush(params ...string) (string, error) {
 	key := params[0]
@@ -127,12 +158,23 @@ func rpop(params ...string) (string, error) {
 }
 func lrange(params ...string) (string, error) {
 	key := params[0]
-	err := getLock(key)
+	start := params[1]
+	end := params[2]
+	from, err := strconv.Atoi(start)
 	if err != nil {
-		getUnLock(key)
+		return "", err
+	}
+	to, err := strconv.Atoi(end)
+	if err != nil {
+		return "", err
+	}
+	err = getLock(key)
+	if err != nil {
 		return "", err
 	} else {
-		return "",nil
-
+		list := db.storage[key].val.(*strlist)
+		ss := list.lgets(from, to)
+		getUnLock(key)
+		return strings.Join(ss, "\n"), nil
 	}
 }
