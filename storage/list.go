@@ -43,9 +43,9 @@ func (list *strlist) popBack() (string) {
 		list.tail, list.tail.pre.next = list.tail.pre, nil
 		list.len--
 		return value
-	}else{
-		value:=list.tail.value
-		list.tail,list.head=nil,nil
+	} else {
+		value := list.tail.value
+		list.tail, list.head = nil, nil
 		list.len--
 		return value
 	}
@@ -56,9 +56,9 @@ func (list *strlist) popFront() (string) {
 		list.head, list.head.next.pre = list.head.next, nil
 		list.len--
 		return value
-	}else{
-		value:=list.tail.value
-		list.tail,list.head=nil,nil
+	} else {
+		value := list.tail.value
+		list.tail, list.head = nil, nil
 		list.len--
 		return value
 	}
@@ -77,7 +77,20 @@ func lpush(params ...string) (string, error) {
 		return result, nil
 	}
 }
-
+func rpush(params ...string) (string, error) {
+	key := params[0]
+	value := params[1]
+	err := setLock(key)
+	if err != nil {
+		db.storage[key].val = newList(value)
+		setUnLock(key)
+		return "1", nil
+	} else {
+		result := strconv.Itoa(db.storage[key].val.(*strlist).pushFront(value))
+		setUnLock(key)
+		return result, nil
+	}
+}
 func lpop(params ...string) (string, error) {
 	key := params[0]
 	err := setLock(key)
@@ -94,4 +107,32 @@ func lpop(params ...string) (string, error) {
 		return result, nil
 	}
 
+}
+func rpop(params ...string) (string, error) {
+	key := params[0]
+	err := setLock(key)
+	if err != nil {
+		setUnLock(key)
+		return "", err
+	} else {
+		list := db.storage[key].val.(*strlist)
+		result := list.popFront()
+		if list.len == 0 {
+			db.storage[key].val = nil
+		}
+		setUnLock(key)
+		return result, nil
+	}
+
+}
+func lrange(params ...string) (string, error) {
+	key := params[0]
+	err := getLock(key)
+	if err != nil {
+		getUnLock(key)
+		return "", err
+	} else {
+		return "",nil
+
+	}
 }

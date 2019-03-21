@@ -33,7 +33,8 @@ func init() {
 	mapFunc["get"]=funcStruct{1,getStr}
 	mapFunc["lpush"]=funcStruct{2,lpush}
 	mapFunc["lpop"]=funcStruct{1,lpop}
-}
+	mapFunc["rpush"]=funcStruct{2,rpush}
+	mapFunc["rpop"]=funcStruct{1,rpop}}
 
 func (d *dict) exist(key string) bool {
 	err:=getLock(key)
