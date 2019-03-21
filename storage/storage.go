@@ -16,29 +16,33 @@ type Value struct {
 // Method represent the method that underlying data structure regsiter
 type Method func([]string) (string, error)
 
-// ErrMethodNotSupport means that method not support
-var ErrMethodNotSupport = errors.New("method not support")
+var (
+	// ErrMethodNotSupport means that method not support
+	ErrMethodNotSupport = errors.New("method not support")
 
-// ErrInvalidNumPara means that invalid number of parameters
-var ErrInvalidNumPara = errors.New("invalid number of parameters")
+	// ErrInvalidNumPara means that invalid number of parameters
+	ErrInvalidNumPara = errors.New("invalid number of parameters")
 
-// ErrKeyNotExist means that the key don't exist
-var ErrKeyNotExist = errors.New("key do not exist")
+	// ErrKeyNotExist means that the key don't exist
+	ErrKeyNotExist = errors.New("key do not exist")
 
-// ErrInvalidPara means that the parameters is invalidPara
-var ErrInvalidPara = errors.New("invalid parameters")
+	// ErrInvalidPara means that the parameters is invalidPara
+	ErrInvalidPara = errors.New("invalid parameters")
 
-// ErrMismatchStruct means that the method is not suitable for this data structure
-var ErrMismatchStruct = errors.New("mismatched data structure")
+	// ErrMismatchStruct means that the method is not suitable for this data structure
+	ErrMismatchStruct = errors.New("mismatched data structure")
+)
 
-// BigData represent a table in redis-like
-var BigData = make(map[string]*Value)
+var (
+	// BigData represent a table in redis-like
+	BigData = make(map[string]*Value)
 
-// MethodMap is a set that include all supported method
-var MethodMap = make(map[string]Method)
+	// MethodMap is a set that include all supported method
+	MethodMap = make(map[string]Method)
 
-// DataLock is a lock which protect the BigData's keys
-var DataLock sync.RWMutex
+	// DataLock is a lock which protect the BigData's keys
+	DataLock sync.RWMutex
+)
 
 // RegisterMethod can let underlying data structure register their method support
 func RegisterMethod(methodName string, method Method) (err error) {
