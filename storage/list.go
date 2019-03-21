@@ -33,7 +33,10 @@ func Lpush(args []string) (string, error) {
 	if value, ok := BigData[strKey]; ok {
 		value.Lock.Lock()
 		DataLock.RUnlock()
-		tempList := value.Princess.(*strongList)
+		tempList, err := tryTransform(value.Princess)
+		if err != nil {
+			return "", err
+		}
 		for _, arg := range args[1:] {
 			tempList.PushFront(arg)
 		}
@@ -45,7 +48,10 @@ func Lpush(args []string) (string, error) {
 	if value, ok := BigData[strKey]; ok {
 		value.Lock.Lock()
 		DataLock.Unlock()
-		tempList := value.Princess.(*strongList)
+		tempList, err := tryTransform(value.Princess)
+		if err != nil {
+			return "", err
+		}
 		for _, arg := range args[1:] {
 			tempList.PushFront(arg)
 		}
@@ -58,7 +64,10 @@ func Lpush(args []string) (string, error) {
 	value.Lock.Lock()
 	BigData[strKey] = value
 	DataLock.Unlock()
-	tempList := value.Princess.(*strongList)
+	tempList, err := tryTransform(value.Princess)
+	if err != nil {
+		return "", err
+	}
 	for _, arg := range args[1:] {
 		tempList.PushFront(arg)
 	}
@@ -76,7 +85,10 @@ func Rpush(args []string) (string, error) {
 	if value, ok := BigData[strKey]; ok {
 		value.Lock.Lock()
 		DataLock.RUnlock()
-		tempList := value.Princess.(*strongList)
+		tempList, err := tryTransform(value.Princess)
+		if err != nil {
+			return "", err
+		}
 		for _, arg := range args[1:] {
 			tempList.PushBack(arg)
 		}
@@ -88,7 +100,10 @@ func Rpush(args []string) (string, error) {
 	if value, ok := BigData[strKey]; ok {
 		value.Lock.Lock()
 		DataLock.Unlock()
-		tempList := value.Princess.(*strongList)
+		tempList, err := tryTransform(value.Princess)
+		if err != nil {
+			return "", err
+		}
 		for _, arg := range args[1:] {
 			tempList.PushBack(arg)
 		}
@@ -101,7 +116,10 @@ func Rpush(args []string) (string, error) {
 	value.Lock.Lock()
 	BigData[strKey] = value
 	DataLock.Unlock()
-	tempList := value.Princess.(*strongList)
+	tempList, err := tryTransform(value.Princess)
+	if err != nil {
+		return "", err
+	}
 	for _, arg := range args[1:] {
 		tempList.PushBack(arg)
 	}
@@ -119,7 +137,10 @@ func Lpop(args []string) (result string, err error) {
 	if value, ok := BigData[strKey]; ok {
 		value.Lock.Lock()
 		DataLock.RUnlock()
-		tempList := value.Princess.(*strongList)
+		tempList, err := tryTransform(value.Princess)
+		if err != nil {
+			return "", err
+		}
 		if tempList.Len() == 0 {
 			value.Lock.Unlock()
 			return "", ErrKeyNotExist
@@ -142,7 +163,10 @@ func Rpop(args []string) (result string, err error) {
 	if value, ok := BigData[strKey]; ok {
 		value.Lock.Lock()
 		DataLock.RUnlock()
-		tempList := value.Princess.(*strongList)
+		tempList, err := tryTransform(value.Princess)
+		if err != nil {
+			return "", err
+		}
 		if tempList.Len() == 0 {
 			value.Lock.Unlock()
 			return "", ErrKeyNotExist
@@ -177,7 +201,10 @@ func Lrange(args []string) (string, error) {
 	if value, ok := BigData[strKey]; ok {
 		value.Lock.RLock()
 		DataLock.RUnlock()
-		tempList := value.Princess.(*strongList)
+		tempList, err := tryTransform(value.Princess)
+		if err != nil {
+			return "", err
+		}
 		if tempList.Len() == 0 {
 			value.Lock.RUnlock()
 			return "", ErrKeyNotExist
@@ -213,6 +240,14 @@ func ifstrwmod(index string, len int) (ret int, err error) {
 	}
 	if len < 0 {
 		ret += len + 1
+	}
+	return
+}
+
+func tryTransform(value interface{}) (ret *strongList, err error) {
+	ret, ok := value.(*strongList)
+	if !ok {
+		return nil, ErrMismatchStruct
 	}
 	return
 }

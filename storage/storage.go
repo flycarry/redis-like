@@ -28,6 +28,9 @@ var ErrKeyNotExist = errors.New("key do not exist")
 // ErrInvalidPara means that the parameters is invalidPara
 var ErrInvalidPara = errors.New("invalid parameters")
 
+// ErrMismatchStruct means that the method is not suitable for this data structure
+var ErrMismatchStruct = errors.New("mismatched data structure")
+
 // BigData represent a table in redis-like
 var BigData = make(map[string]*Value)
 

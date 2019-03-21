@@ -37,7 +37,10 @@ func Get(args []string) (result string, err error) {
 	strKey := args[0]
 	DataLock.RLock()
 	if strValue, ok := BigData[strKey]; ok {
-		result = strValue.Princess.(string)
+		result, ok = strValue.Princess.(string)
+		if !ok {
+			return "", ErrMismatchStruct
+		}
 		DataLock.RUnlock()
 		err = nil
 		return
