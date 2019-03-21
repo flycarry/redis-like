@@ -29,7 +29,13 @@ func (list *strlist) pushBack(value string) int {
 	return list.len
 
 }
+func (list *strlist) pushFront(value string) int {
+	n := node{value: value, next: list.head}
+	list.head.pre, list.head = &n, &n
+	list.len++
+	return list.len
 
+}
 func (list *strlist) popBack() (string) {
 	if list.len > 1 {
 
@@ -44,7 +50,19 @@ func (list *strlist) popBack() (string) {
 		return value
 	}
 }
-
+func (list *strlist) popFront() (string) {
+	if list.len > 1 {
+		value := list.head.value
+		list.head, list.head.next.pre = list.head.next, nil
+		list.len--
+		return value
+	}else{
+		value:=list.tail.value
+		list.tail,list.head=nil,nil
+		list.len--
+		return value
+	}
+}
 func lpush(params ...string) (string, error) {
 	key := params[0]
 	value := params[1]
