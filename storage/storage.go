@@ -2,7 +2,6 @@ package storage
 
 import (
 	"errors"
-	"regexp"
 	"strings"
 	"sync"
 )
@@ -56,7 +55,7 @@ func RegisterMethod(methodName string, method Method) (err error) {
 
 // Process accept all commond string, parse it and distribute to the corresponding method
 func Process(command string) (result string) {
-	temp := regexp.MustCompile(`\s+`).Split(strings.TrimSpace(command), -1)
+	temp := strings.Fields(command)
 	if len(temp) < 2 {
 		return "-error: invalid number of parameters"
 	}
