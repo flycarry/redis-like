@@ -64,6 +64,5 @@ func Process(command string) (result string) {
 	if err != nil {
 		return "-error: " + err.Error()
 	}
-	result = result
 	return
 }
