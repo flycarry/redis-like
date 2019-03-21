@@ -31,6 +31,8 @@ func init() {
 	mapFunc["del"]=funcStruct{1,delKey}
 	mapFunc["set"]=funcStruct{2,setStr}
 	mapFunc["get"]=funcStruct{1,getStr}
+	mapFunc["lpush"]=funcStruct{2,lpush}
+	mapFunc["lpop"]=funcStruct{1,lpop}
 }
 
 func (d *dict) exist(key string) bool {
