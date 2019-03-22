@@ -1,6 +1,7 @@
 package net
 
 import (
+	"bufio"
 	"github.com/flycarry/redis-like/route"
 	"io"
 	"log"
@@ -32,22 +33,18 @@ func Socket_server(port string) {
 
 func resolve_conn(c net.Conn) {
 	for {
-		buf := make([]byte, 512)
-		l, err := c.Read(buf)
-		if err == io.EOF {
-			return
-		}
-		if err != nil {
-			log.Println(err)
+		scan := bufio.NewScanner(c)
+		scan.Split(bufio.ScanLines)
+		for scan.Scan() {
+			str := scan.Text()
+			log.Println(str)
 
+			_, err := io.WriteString(c, route.DoReply(str)+"\n")
+			if err != nil {
+				panic("socket error")
+			}
 		}
-		log.Println(string(buf[:l]))
-		_, err = io.WriteString(c, route.DoReply(string(buf[:l]))+"\n")
-		if err != nil {
-			panic("socket error")
-		}
+
 		defer c.Close()
 	}
 }
-
-
