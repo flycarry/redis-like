@@ -109,6 +109,23 @@ func (list *strlist) rgets(start, end int) []string {
 	}
 	return ss
 }
+
+func (list *strlist) insert(insert_before string, value string) (err error) {
+	for _,now:=0,list.head;now!=nil;now=now.next{
+		if now.value==insert_before{
+			n:=node{now.pre,now,value}
+			if list.head==now{
+				list.head=&n
+			}else{
+				now.pre.next=&n
+				now.pre=&n
+			}
+			n.next=now
+			return
+		}
+	}
+	return errors.New("value not exist")
+}
 func lpush(params ...string) (string, error) {
 	key := params[0]
 	value := params[1]
@@ -213,4 +230,24 @@ func lindex(params ...string) (string, error) {
 		getUnLock(key)
 		return s, nil
 	}
+}
+func linsert(params ...string)(string,error){
+	key:=params[0]
+	write_before:=params[1]
+	value:=params[2]
+	err:=setLock(key)
+	if err!=nil{
+		setUnLock(key)
+		return "",err
+	}else{
+		list:=db.storage[key].val.(*strlist)
+		err=list.insert(write_before,value)
+		setUnLock(key)
+		if err != nil {
+			return "",err
+		}else{
+			return "ok",nil
+		}
+	}
+
 }

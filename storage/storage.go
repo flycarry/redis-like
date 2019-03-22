@@ -39,6 +39,7 @@ func init() {
 	mapFunc["rpop"] = funcStruct{params: 1, function: rpop}
 	mapFunc["lrange"] = funcStruct{params: 3, function: lrange}
 	mapFunc["lindex"] = funcStruct{params: 2, function: lindex}
+	mapFunc["linsert"] = funcStruct{params: 3, function: linsert}
 }
 
 func (d *dict) exist(key string) bool {
