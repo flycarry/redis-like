@@ -30,6 +30,7 @@ func SocketServer(addr string) {
 }
 
 func resolveConn(conn net.Conn) {
+	defer conn.Close()
 	split := func(data []byte, atEOF bool) (int, []byte, error) {
 		index := bytes.Index(data, messageSeparator)
 		if index != -1 {
