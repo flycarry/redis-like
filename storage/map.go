@@ -5,7 +5,7 @@ import (
 	"hash/crc32"
 )
 
-const defaultCapaity = 16
+const defaultCapaity = 256
 
 var keyNotFound = errors.New("key not found")
 
@@ -30,7 +30,8 @@ func initMap(cap int) *myMap {
 	}
 }
 func (m *myMap) set(key, value string) {
-	index := hash(key) / cap(m.values)
+	index := hash(key) % cap(m.values)
+
 	entrys := m.values[index]
 	entryTemp := entry{key, value, nil}
 	if entrys == nil {
@@ -52,7 +53,7 @@ func (m *myMap) set(key, value string) {
 	}
 }
 func (m *myMap) get(key string) (string, error) {
-	index := hash(key) / cap(m.values)
+	index := hash(key) % cap(m.values)
 	entrys := m.values[index]
 	for ; entrys != nil; entrys = entrys.next {
 		if entrys.key == key {
@@ -61,8 +62,10 @@ func (m *myMap) get(key string) (string, error) {
 	}
 	return "", keyNotFound
 }
-func (m *myMap)remap(){
+func (m *myMap) remap() {
+	if m.len*100 > (cap(m.values)*75){
 
+	}
 }
 func hash(s string) int {
 	return hashtool(s)
@@ -80,11 +83,11 @@ func hashWithcrc(s string) int {
 func hashtool(s string) int {
 	sum := 0
 	for b := range []byte(s) {
-		temp:=sum&(255<<24)
-		temp=temp>>24
-		sum=sum<<8
-		temp^=b
-		sum &=temp
+		temp := sum & (255 << 24)
+		temp = temp >> 24
+		sum = sum << 8
+		temp ^= b
+		sum &= temp
 	}
 	return sum
 }
