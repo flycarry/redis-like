@@ -15,8 +15,8 @@ type myMap struct {
 }
 
 type entry struct {
-	key   string
-	value string
+	key   *string
+	value *string
 	next  *entry
 }
 
@@ -33,20 +33,20 @@ func (m *myMap) set(key, value string) {
 	index := hash(key) % cap(m.values)
 
 	entrys := m.values[index]
-	entryTemp := entry{key, value, nil}
+	entryTemp := entry{&key, &value, nil}
 	if entrys == nil {
 		m.values[index] = &entryTemp
 		m.len++
 		return
 	}
 	for ; entrys.next != nil; entrys = entrys.next {
-		if entrys.key == key {
-			entrys.value = value
+		if *entrys.key == key {
+			*entrys.value = value
 			return
 		}
 	}
-	if entrys.key == key {
-		entrys.value = value
+	if *entrys.key == key {
+		*entrys.value = value
 	} else {
 		entrys.next = &entryTemp
 		m.len++
@@ -56,8 +56,8 @@ func (m *myMap) get(key string) (string, error) {
 	index := hash(key) % cap(m.values)
 	entrys := m.values[index]
 	for ; entrys != nil; entrys = entrys.next {
-		if entrys.key == key {
-			return entrys.value, nil
+		if *entrys.key == key {
+			return *entrys.value, nil
 		}
 	}
 	return "", keyNotFound
