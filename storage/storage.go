@@ -20,6 +20,11 @@ type funcStruct struct {
 	function  func(...string) (string, error)
 	allowType int
 }
+type errorKeyNotExits int
+
+func (err *errorKeyNotExits) Error() string {
+	return "not exist"
+}
 
 var mapFunc map[string]funcStruct
 var db dict
@@ -43,12 +48,12 @@ func init() {
 }
 
 func (d *dict) exist(key string) bool {
-	err := getLock(key)
+	val, err := getLock(key)
 	if err != nil {
 		return false
 	}
-	defer getUnLock(key)
-	return d.storage[key] == nil
+	defer getUnLock(val)
+	return val == nil
 }
 
 func GetResult(params ...string) (result string, err error) {
@@ -69,46 +74,38 @@ func GetResult(params ...string) (result string, err error) {
 	}
 
 }
-func getType(key string) (int) {
-	err := getLock(key)
-	if err != nil {
-		return 0
-	} else {
-		t := db.storage[key].val.getType()
-		getUnLock(key)
-		return t
-	}
-}
-func getLock(key string) error {
+
+func getLock(key string) (*value, error) {
 	mu.RLock()
+	defer mu.RUnlock()
 	if db.storage[key] != nil {
 		db.storage[key].mutex.RLock()
-		mu.RUnlock()
-		return nil
+		return db.storage[key], nil
 	} else {
-		mu.RUnlock()
-		return errors.New("not exist")
+		return db.storage[key], errors.New("not exist")
 	}
 }
-func getUnLock(key string) {
-	db.storage[key].mutex.RUnlock()
+func getUnLock(value *value) {
+	value.mutex.RUnlock()
 }
 
-func setLock(key string) error {
+func setLock(key string) (*value, error) {
 	mu.Lock()
+	defer mu.Unlock()
 	if db.storage[key] != nil {
-		db.storage[key].mutex.Lock()
-		mu.Unlock()
-		return nil
+		v := db.storage[key]
+		v.mutex.Lock()
+		return v, nil
 	} else {
 		db.storage[key] = &value{sync.RWMutex{}, nil}
-		db.storage[key].mutex.Lock()
-		mu.Unlock()
-		return errors.New("not exist")
+		v := db.storage[key]
+		v.mutex.Lock()
+		return v, errors.New("not exist")
 	}
 }
-func setUnLock(key string) {
-	v := db.storage[key]
+func setUnLock(v *value, key string) {
+	mu.Lock()
+	defer mu.Unlock()
 	if v.val == nil {
 		db.storage[key] = nil
 		v.mutex.Unlock()
@@ -116,6 +113,7 @@ func setUnLock(key string) {
 		v.mutex.Unlock()
 	}
 }
+
 func isExist(params ...string) (string, error) {
 	if db.exist(params[0]) {
 		return "yes", nil
@@ -125,13 +123,13 @@ func isExist(params ...string) (string, error) {
 
 func delKey(params ...string) (string, error) {
 	key := params[0]
-	err := setLock(key)
+	v, err := setLock(key)
 	if err != nil {
-		setUnLock(key)
+		setUnLock(v, key)
 		return "", err
 	} else {
-		db.storage[key].val = nil
-		setUnLock(key)
+		v.val = nil
+		setUnLock(v, key)
 		return "delete success", nil
 	}
 }

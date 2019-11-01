@@ -19,6 +19,7 @@ type node struct {
 func (list *strlist) getType() int {
 	return 2
 }
+
 func newList(value string) *strlist {
 	n := node{value: value}
 	return &strlist{&n, &n, 1}
@@ -29,15 +30,15 @@ func (list *strlist) pushBack(value string) int {
 	list.tail.next, list.tail = &n, &n
 	list.len++
 	return list.len
-
 }
+
 func (list *strlist) pushFront(value string) int {
 	n := node{value: value, next: list.head}
 	list.head.pre, list.head = &n, &n
 	list.len++
 	return list.len
-
 }
+
 func (list *strlist) popBack() string {
 	if list.len > 1 {
 
@@ -73,7 +74,7 @@ func (list *strlist) lgets(start, end int) []string {
 	if start >= end {
 		return ss
 	}
-	for i, node := 0, list.head; i < end; node = node.next {
+	for i, node := 0, list.head; i < end && i < list.len; node = node.next {
 		if i >= start {
 			ss = append(ss, node.value)
 		}
@@ -110,84 +111,89 @@ func (list *strlist) rgets(start, end int) []string {
 	return ss
 }
 
-func (list *strlist) insert(insert_before string, value string) (err error) {
-	for _,now:=0,list.head;now!=nil;now=now.next{
-		if now.value==insert_before{
-			n:=node{now.pre,now,value}
-			if list.head==now{
-				list.head=&n
-			}else{
-				now.pre.next=&n
-				now.pre=&n
+func (list *strlist) insert(insertBefore string, value string) (err error) {
+	for _, now := 0, list.head; now != nil; now = now.next {
+		if now.value == insertBefore {
+			n := node{now.pre, now, value}
+			if list.head == now {
+				now.pre = &n
+				list.head = &n
+			} else {
+				now.pre.next = &n
+				now.pre = &n
 			}
-			n.next=now
+			n.next = now
+			list.len++
 			return
 		}
 	}
 	return errors.New("value not exist")
 }
+
 func lpush(params ...string) (string, error) {
 	key := params[0]
 	value := params[1]
-	err := setLock(key)
+	v, err := setLock(key)
 	if err != nil {
-		db.storage[key].val = newList(value)
-		setUnLock(key)
+		v.val = newList(value)
+		setUnLock(v, key)
 		return "1", nil
 	} else {
-		result := strconv.Itoa(db.storage[key].val.(*strlist).pushBack(value))
-		setUnLock(key)
+		result := strconv.Itoa(v.val.(*strlist).pushFront(value))
+		setUnLock(v, key)
 		return result, nil
 	}
 }
+
 func rpush(params ...string) (string, error) {
 	key := params[0]
 	value := params[1]
-	err := setLock(key)
+	v, err := setLock(key)
 	if err != nil {
-		db.storage[key].val = newList(value)
-		setUnLock(key)
+		v.val = newList(value)
+		setUnLock(v, key)
 		return "1", nil
 	} else {
-		result := strconv.Itoa(db.storage[key].val.(*strlist).pushFront(value))
-		setUnLock(key)
+		result := strconv.Itoa(v.val.(*strlist).pushBack(value))
+		setUnLock(v, key)
 		return result, nil
 	}
 }
+
 func lpop(params ...string) (string, error) {
 	key := params[0]
-	err := setLock(key)
+	v, err := setLock(key)
 	if err != nil {
-		setUnLock(key)
+		setUnLock(v, key)
 		return "", err
 	} else {
-		list := db.storage[key].val.(*strlist)
-		result := list.popBack()
-		if list.len == 0 {
-			db.storage[key].val = nil
-		}
-		setUnLock(key)
-		return result, nil
-	}
-
-}
-func rpop(params ...string) (string, error) {
-	key := params[0]
-	err := setLock(key)
-	if err != nil {
-		setUnLock(key)
-		return "", err
-	} else {
-		list := db.storage[key].val.(*strlist)
+		list := v.val.(*strlist)
 		result := list.popFront()
 		if list.len == 0 {
-			db.storage[key].val = nil
+			v.val = nil
 		}
-		setUnLock(key)
+		setUnLock(v, key)
 		return result, nil
 	}
-
 }
+
+func rpop(params ...string) (string, error) {
+	key := params[0]
+	v, err := setLock(key)
+	if err != nil {
+		setUnLock(v, key)
+		return "", err
+	} else {
+		list := v.val.(*strlist)
+		result := list.popBack()
+		if list.len == 0 {
+			v.val = nil
+		}
+		setUnLock(v, key)
+		return result, nil
+	}
+}
+
 func lrange(params ...string) (string, error) {
 	key := params[0]
 	start := params[1]
@@ -200,16 +206,17 @@ func lrange(params ...string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	err = getLock(key)
+	val, err := getLock(key)
 	if err != nil {
 		return "", err
 	} else {
-		list := db.storage[key].val.(*strlist)
+		list := val.val.(*strlist)
 		ss := list.lgets(from, to)
-		getUnLock(key)
+		getUnLock(val)
 		return strings.Join(ss, "\n"), nil
 	}
 }
+
 func lindex(params ...string) (string, error) {
 	key := params[0]
 	index := params[1]
@@ -217,37 +224,36 @@ func lindex(params ...string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	err = getLock(key)
+	val, err := getLock(key)
+	defer getUnLock(val)
 	if err != nil {
 		return "", err
 	} else {
-		list := db.storage[key].val.(*strlist)
-		s,err := list.index(i)
+		list := val.val.(*strlist)
+		s, err := list.index(i)
 		if err != nil {
-			getUnLock(key)
-			return "",err
+			return "", err
 		}
-		getUnLock(key)
 		return s, nil
 	}
 }
-func linsert(params ...string)(string,error){
-	key:=params[0]
-	write_before:=params[1]
-	value:=params[2]
-	err:=setLock(key)
-	if err!=nil{
-		setUnLock(key)
-		return "",err
-	}else{
-		list:=db.storage[key].val.(*strlist)
-		err=list.insert(write_before,value)
-		setUnLock(key)
+
+func linsert(params ...string) (string, error) {
+	key := params[0]
+	write_before := params[1]
+	value := params[2]
+	v, err := setLock(key)
+	if err != nil {
+		setUnLock(v, key)
+		return "", err
+	} else {
+		list := v.val.(*strlist)
+		err = list.insert(write_before, value)
+		setUnLock(v, key)
 		if err != nil {
-			return "",err
-		}else{
-			return "ok",nil
+			return "", err
+		} else {
+			return "ok", nil
 		}
 	}
-
 }
